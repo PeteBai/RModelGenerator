@@ -8,11 +8,11 @@ categoryCount = 0
 manufactureCount = 0
 userCount = 0
 
-dirX = "C:\\Users\\surface\\Desktop\\Project Sydney\\电商数据生成a.3\\"
+dirX = "C:\\Users\\surface\\Desktop\\Project Sydney\\电商数据生成a.4\\"
 
 def generateData(rows, cols, pLabels, pFileName, pIsSerried, pIsUUID):
     #print(random.randint(1, 100))
-    f = open(str(pFileName)+".dat",'w+')
+    f = open(dirX+"gen\\"+str(pFileName)+".dat",'w+')
     f.write(pLabels)
     f.write("\n")
     if(pIsSerried == True):
@@ -72,18 +72,18 @@ def generateManufacture():
 #获得开始-结束的时间，获得变化程度
 #在这段给定的时间内，随机获取n个时间点【list】，对所有事件随机分配
 
-def convertTime(startYear, endYear, minLoop, maxLoop):
+def convertTime2(startYear, endYear):
     #maxLoop是系统最多要分配多少次不同标签
     YRS_IN_SEC = 31536000
     dts = str(startYear) + "-01-01 00:00:00"
     tss = time.mktime(time.strptime(dts, "%Y-%m-%d %H:%M:%S"))
-    dte = str(endYear) + "-12-31 23:59:59"
-    tse = time.mktime(time.strptime(dte, "%Y-%m-%d %H:%M:%S"))
-    res = []
-    ml = random.randint(minLoop, maxLoop)
-    for i in range(0, ml):
-        res.append((int(tss)+random.randint(0, (YRS_IN_SEC-1)*(endYear-startYear+1)))*1000)
-    return res
+    #dte = str(endYear) + "-12-31 23:59:59"
+    #tse = time.mktime(time.strptime(dte, "%Y-%m-%d %H:%M:%S"))
+    #res = []
+    #ml = random.randint(minLoop, maxLoop)
+    #for i in range(0, ml):
+        #res.append((int(tss)+random.randint(0, (YRS_IN_SEC-1)*(endYear-startYear+1)))*1000)
+    return (int(tss)+random.randint(0, (YRS_IN_SEC-1)*(endYear-startYear+1)))*1000
 
 #03-14-15：52
 #每个用户维护一个list，里面是他访问的所有店铺。再为每个用户生成随即上限值
@@ -101,6 +101,7 @@ def percentControl(pPickPecrentage):
     else:
         return False
 
+# 为一个用户生成一些店铺
 def generateManu(pMaxManu):
     allManu = []
     seedManu = []
@@ -114,7 +115,20 @@ def generateManu(pMaxManu):
     allManu.clear()
     return seedManu
 
-
+# 为一个店铺生成一些标签
+def generateMC(pMaxCate):
+    l = []
+    c = []
+    limit = random.randint(1,pMaxCate)
+    for i in range(0, categoryCount):
+        c.append(i+1)
+    random.shuffle(c)
+    for i in range(0, limit):
+        l.append(c[0])
+        c.pop(0)
+    c.clear()
+    return l
+    
 #03-18-19：40
 #好友和店铺的浏览次数之间的联系关系：
 #对于一对好友来说，会有共同访问的店铺列表
@@ -196,7 +210,7 @@ def generateUMV2(pMaxFriends, pMaxManu, pPickPecrentage, pThreshold, pMaxViewCou
             f.writelines(str(i)+" "+str(j)+" "+str(v[i-1][j])+"\n")
     f.close()
     threshold.clear()
-    return m
+    return (g, m)
 
 #03-14-20:55
 # 目前朋友选择的商家有一定的相似性
@@ -206,50 +220,136 @@ def generateUMV2(pMaxFriends, pMaxManu, pPickPecrentage, pThreshold, pMaxViewCou
 # 在交集中选出一定比例的标签，再与不在交集中的一些标签做混合
 # 这是新的所选标签，依次向下传播
 
-def generateMC(pMaxCate):
-    c = []
-    limit = random.randint(1,pMaxCate)
-    for i in range(0, pMaxCate):
-        c.append(i+1)
-    random.shuffle(c)
-    for i in range(0, limit):
-        c.append(c[0])
-    return c
+#03-22-21：10
+# 在上面的操作后，我们得到了一个用户的商店-标签的对应列表
+# 抽取这个用户的所有标签，传递给他的所有朋友
+# 朋友以一定的概率接受其中的部分标签，一次与他所选的所有商店做交集，以一定概率保留其中共同的元素，再混入当前商店的一些其他标签
+# 维护一个传播次数列表，设置最大传播次数，每个朋友都要传播，但是传播到达最大次数就停止传播
+# 算法：遍历所有人，如果这个人的标签集合为空，就用列表顺序传播的方法生成一些，然后给朋友传播
+# 如果不是空，就网状传播
+# 关于时间：只有在新生成用户标签的时候才使用新时间戳
+# 如果网状传播，朋友接受标签的时候要连着时间戳一起接受。这就意味着，要维护一个“标签-时间戳”字典！
 
-
-def generateUMCT2(pMaxFriends, pMaxManu, pPickPecrentage, pThreshold, pMaxCate, pTagPercentage, pMaxViewCount, pStartYear, pEndYear, pMinLoop, pMaxLoop, pIsNegative=False):
-    manuList = generateUMV2(pMaxFriends, pMaxManu, pPickPecrentage, pThreshold, pMaxViewCount, pIsNegative)
-    c = []
-    f = open(dirX+"gen\\User-Manu-Cate-TimeStamp.dat",'w+')
-    f.write("userId manufactureId categoryId timeStamp\n")
+def generateUMCT3(pMaxFriends, pMaxManu, pPickPecrentage, pThreshold, pMaxCate, pTagPercentage, pMaxViewCount, pStartYear, pEndYear, pIsNegative=False):
+    (friendGraph, manuList) = generateUMV2(pMaxFriends, pMaxManu, pPickPecrentage, pThreshold, pMaxViewCount, pIsNegative)
+    c = []#c是供应商-类别列表
+    umc = [-1] * userCount
+    uct = [-1] * userCount#用户标签时间戳字典列表
     #创建所有制造商提供的各种标签
     for i in range(0, manufactureCount):
         c.append(generateMC(pMaxCate))
-    #对于每个人，都做上面的操作
     for i in range(0, userCount):
-        singleManu = manuList[i]   
-        sets = []
-        for j in singleManu:
-            sets.append(set(c[j-1]))
-        limit = random.randint(1, pMaxCate)
-        t = list(sets[0])
-        random.shuffle(t)
-        time = convertTime(pStartYear, pEndYear, pMinLoop, pMaxLoop)
-        random.shuffle(time)
-        for j in range(0, limit):
-            f.writelines(str(i+1)+" "+str(singleManu[0])+" "+str(t[0])+" "+str(time[0])+"\n")
-            t.pop(0)
-        for j in range(0, len(singleManu)-1):
-            ands = sets[j] & sets[j+1]
-            excepts = list(sets[j+1] - ands)
-            for k in list(ands):
-                if percentControl(pTagPercentage) == True:
-                    random.shuffle(time)
-                    f.writelines(str(i+1)+" "+str(singleManu[j+1])+" "+str(k)+" "+str(time[0])+"\n")
-            for k in excepts:
-                if percentControl(1-pTagPercentage) == True:
-                    random.shuffle(time)
-                    f.writelines(str(i+1)+" "+str(singleManu[j+1])+" "+str(k)+" "+str(time[0])+"\n")
+        #对每一个用户，检查其对应的标签集合是否为空
+        if uct[i] == -1:
+            #是空，按照顺序列表传播的方法生成
+            singleManu = manuList[i]   
+            sets = []
+            for j in singleManu:
+                sets.append(set(c[j-1]))
+            t = list(sets[0])
+            random.shuffle(t)
+            mc = dict()
+            singleC = []
+            limit = random.randint(1, min(pMaxCate, len(t)))
+            for j in range(0, limit):
+                singleC.append(t[0])
+                t.pop(0)
+            mc[singleManu[0]] = singleC
+            singleC = []
+            for j in range(0, len(singleManu)-1):
+                ands = sets[j] & sets[j+1]
+                excepts = list(sets[j+1] - ands)
+                for k in list(ands):
+                    if percentControl(pTagPercentage) == True:
+                        singleC.append(k)
+                for k in excepts:
+                    if percentControl(1-pTagPercentage) == True:
+                        singleC.append(k)
+                mc[singleManu[j+1]] = singleC
+                singleC = []
+            #现在我们拿到了该用户的供应商-类别字典
+            umc[i] = mc
+            singleC.clear()
+            #现在不是空了，抽取标签集
+            allUserTags = set()
+            allUserTagTime = set()
+            for value in umc[i].values():
+                allUserTags = allUserTags | set(value)
+            for tag in list(allUserTags):
+                allUserTagTime.add((tag, convertTime2(pStartYear, pEndYear)))
+            uct[i] = allUserTagTime
+        friends = friendGraph.adjacentTo(str(i+1))
+        for friend in friends:
+            #拿到朋友的商店：
+            friendManu = manuList[int(friend)-1]
+            #拿到自己的标签-时间戳：
+            myTagTime = dict(uct[i])
+            myTag = set()
+            #拿到自己的标签集
+            for key in myTagTime:
+                myTag.add(key)
+            #拿到朋友选择的商店标签，在umc中
+            friendChoice = umc[int(friend)-1]
+            #如果朋友还没有选择，帮他选好
+            if friendChoice == -1:
+                newFriendChoice = dict()
+                for j in friendManu:
+                    #拿到朋友商店中的所有标签：
+                    same = set(c[j-1]) & myTag
+                    #建立该商店的标签列表
+                    friendManuTag = []
+                    for k in list(same):
+                        if percentControl(pTagPercentage) == True:
+                            friendManuTag.append(k)
+                    diff = set(c[j-1]) - myTag
+                    for k in list(diff):
+                        if percentControl(pTagPercentage) == False:
+                            friendManuTag.append(k)
+                    newFriendChoice[j] = friendManuTag
+                umc[int(friend)-1] = newFriendChoice
+            #如果朋友选了，和他选的混在一起
+            else:
+                for key, value in friendChoice.items():
+                    same = myTag & set(value)
+                    diff = set(value) - myTag
+                    for k in list(diff):
+                        if percentControl(pTagPercentage) == True:
+                            same.add(k)
+                    friendChoice[key] = same
+            #获取朋友的时间戳
+            friendTime = dict()
+            if uct[int(friend)-1] != -1:
+                friendTime = dict(uct[int(friend)-1])
+            newFriendTime = dict()
+            friendChoice = umc[int(friend)-1]
+            friendTagSet = set()
+            #找出朋友所有的标签
+            for value in friendChoice.values():
+                friendTagSet = friendTagSet | set(value)
+            for key in friendTagSet:
+                if myTagTime.get(key) != None:#在我这里就用我的
+                    newFriendTime[key] = myTagTime.get(key)
+                    pass
+                elif friendTime.get(key) != None:#在朋友那里但不在我这里
+                    newFriendTime[key] = friendTime.get(key)
+                else:
+                    newFriendTime[key] = convertTime2(pStartYear, pEndYear)
+            #uct[int(friend)-1] = tuple(newFriendTime)
+            newFTimeTuple = []
+            for key, value in newFriendTime.items():
+                newFTimeTuple.append((key, value))
+            uct[int(friend)-1] = newFTimeTuple
+    f = open(dirX+"gen\\User-Manu-Cate-TimeStamp.dat",'w+')
+    f.write("userId manufactureId categoryId timeStamp\n")
+    for i in range(0, userCount):
+        #manuList, umc, uct
+        for j in range(0, len(manuList[i])):
+            for key, value in umc[i].items():
+                for v in value:
+                    for tu in uct[i]:
+                        if tu[0] == v:
+                            timestamp = tu[1]
+                    f.writelines(str(i+1)+" "+str(key)+" "+str(v)+" "+str(timestamp)+"\n")
     f.close()
 
 #！！---注意：该函数已经不再使用！---
@@ -276,7 +376,7 @@ def generateUMCT(pMaxCate, pMaxManu, pMaxViewCount, pStartYear, pEndYear, pMinLo
     for i in range(1,int(num)+1):
         maxM = random.randint(1, pMaxManu)
         #maxM是当前用户选择供应商的数目，pMaxManu是一个用户最多可以选择多少供应商。
-        t = convertTime(pStartYear, pEndYear, pMinLoop, pMaxLoop)
+        t = convertTime2(pStartYear, pEndYear)
         for j in range(0, maxM):#for each manufacture
             currManu = random.randint(1, manufactureCount)
             currViewCount = random.randint(1, pMaxViewCount)
@@ -284,7 +384,7 @@ def generateUMCT(pMaxCate, pMaxManu, pMaxViewCount, pStartYear, pEndYear, pMinLo
             for k in m[currManu-1]:#对每个供应商里的所有类别
                 if(random.randint(0,1) == 1):
                     random.shuffle(t)
-                    f.writelines(str(i)+" "+str(currManu)+" "+str(k)+" "+str(t[0])+"\n")
+                    f.writelines(str(i)+" "+str(currManu)+" "+str(k)+" "+str(t)+"\n")
             #下面为顾客浏览的每个供应商随机赋浏览次数，最大为pMaxViewCount个
             af.writelines(str(i)+" "+str(currManu)+" "+str(currViewCount)+"\n")
     f.close()
@@ -335,20 +435,19 @@ if __name__ == "__main__":
     pMaxFriends = int(input("请输入一个用户的朋友数目基准："))
     pPickPercentage = float(input("请输入店铺在朋友间传播时的保留百分比，以小数输入："))
     pThreshold = int(input("请输入店铺在朋友间传播时的最高传播次数："))
+    print("注意：在输入标签传播百分比时请保证在0.8以上，否则会出现许多用户出现空标签的情况。")
     pTagPercentage = float(input("请输入标签在店铺间传递时的保留百分比，以小数输入："))
     print("下面产生时间戳。请输入时间戳开始、结束的年份。\n如2019开始，2020结束，程序将会产生从2019年年初到2020年年底共2年中产生时间戳")
     pStartYear = int(input("请输入时间戳开始的年份："))
     pEndYear = int(input("请输入时间戳结束的年份："))
-    pMinLoop = int(input("请输入该用户时间戳变化的最小次数："))
-    pMaxLoop = int(input("请输入该用户时间戳变化的最大次数："))
     generateCategory()
     generateManufacture()
-    generateUMCT2(pMaxFriends, pMaxManu, pPickPercentage, pThreshold, pMaxCate, pTagPercentage, pMaxViewCount, pStartYear, pEndYear, pMinLoop, pMaxLoop, pIsNegative)
+    generateUMCT3(pMaxFriends, pMaxManu, pPickPercentage, pThreshold, pMaxCate, pTagPercentage, pMaxViewCount, pStartYear, pEndYear, pIsNegative)
 
     # userCount = 500
     # # # #generateFriends(20)
     # manufactureCount = 20
-    # # categoryCount = 5000
+    # categoryCount = 5000
     # # # #generateUM(10, 10, 0.3, 9)
-    # # generateUMCT2(10, 15, 0.6, 9, 20, 0.7, 1000, 2018, 2019, 3, 9)
-    # generateUMV2(10, 10, 0.8, 7, 50, True)
+    # generateUMCT2(10, 15, 0.6, 9, 20, 0.9, 1000, 2018, 2019, 3, 9)
+    # # generateUMV2(10, 10, 0.8, 7, 50, True)
