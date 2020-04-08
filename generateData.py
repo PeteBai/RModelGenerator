@@ -8,7 +8,7 @@ categoryCount = 0
 manufactureCount = 0
 userCount = 0
 
-dirX = "C:\\Users\\surface\\Desktop\\Project Sydney\\电商数据生成a.4\\"
+dirX = "C:\\Users\\surface\\OneDrive - CQU\\Project Sydney\\电商数据生成a.5\\"
 
 def generateData(rows, cols, pLabels, pFileName, pIsSerried, pIsUUID):
     #print(random.randint(1, 100))
@@ -184,6 +184,7 @@ def generateUMV2(pMaxFriends, pMaxManu, pPickPecrentage, pThreshold, pMaxViewCou
         temp = {}
     allPeople = set(allPeople)
     divider = (0.1 if(pIsNegative == False) else 10)
+    divider2 = (2 if(pMaxViewCount <= 10) else pMaxViewCount/10)
     for i in range(1, userCount+1):
         friends = g.adjacentTo(str(i))
         #找出共同的店铺,访问采用int(j)-1
@@ -192,14 +193,14 @@ def generateUMV2(pMaxFriends, pMaxManu, pPickPecrentage, pThreshold, pMaxViewCou
             for k in intersection:
                 v[int(j)-1][k] += random.randint(1, pMaxViewCount * divider)
                 v[i-1][k] += random.randint(1, pMaxViewCount * divider)
-        #对于不是朋友的 共同访问的店铺-1
+        #对于不是访问朋友的共同的店铺-1
         if pIsNegative == True:
             notFriend = list(allPeople - set(friends))
             for j in notFriend:
                 intersection = set(m[int(j)-1]) & set(m[i-1])
                 for k in intersection:
-                    v[int(j)-1][k] -= random.randint(1, pMaxViewCount/10)
-                    v[i-1][k] -= random.randint(1, pMaxViewCount/10)
+                    v[int(j)-1][k] -= random.randint(1, divider2)
+                    v[i-1][k] -= random.randint(1, divider2)
     
     #----------------点击量生成逻辑结束------------------------
     f = open(dirX+"gen\\User-Manu-ViewCount.dat",'w+')
@@ -444,10 +445,8 @@ if __name__ == "__main__":
     generateManufacture()
     generateUMCT3(pMaxFriends, pMaxManu, pPickPercentage, pThreshold, pMaxCate, pTagPercentage, pMaxViewCount, pStartYear, pEndYear, pIsNegative)
 
-    # userCount = 500
-    # # # #generateFriends(20)
-    # manufactureCount = 20
-    # categoryCount = 5000
-    # # # #generateUM(10, 10, 0.3, 9)
-    # generateUMCT2(10, 15, 0.6, 9, 20, 0.9, 1000, 2018, 2019, 3, 9)
-    # # generateUMV2(10, 10, 0.8, 7, 50, True)
+    # userCount = 2000
+    # manufactureCount = 3000
+    # categoryCount = 20000
+    # generateUMCT3(8, 300, 0.6, 30, 200, 0.95, 8, 2017, 2019, True)
+    # generateUMV2(8, 300, 0.6, 30, 8, True)
