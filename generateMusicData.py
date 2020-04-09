@@ -4,7 +4,7 @@ import uuid
 import time
 import graph as g
 
-dirX = "C:\\Users\\surface\\OneDrive - CQU\\Project Sydney\\推荐系统数据生成a.51\\"
+dirX = "C:\\Users\\surface\\OneDrive - CQU\\Project Sydney\\推荐系统数据生成a.61\\"
 
 #依赖函数：为一个用户初始化一些艺术家
 def generateArtists(pMaxArtists, artistsCount):
@@ -139,13 +139,6 @@ def generateUAW(pMaxFriends, pMaxArtists, pPickPecrentage, pThreshold, pMaxWeigh
                 v[int(j)-1][k] += random.randint(1, pMaxWeight * divider)
                 v[i-1][k] += random.randint(1, pMaxWeight * divider)
         #对于不是访问朋友的共同的店铺-1
-        if pIsNegative == True:
-            notFriend = list(allPeople - set(friends))
-            for j in notFriend:
-                intersection = set(m[int(j)-1]) & set(m[i-1])
-                for k in intersection:
-                    v[int(j)-1][k] -= random.randint(1, divider2)
-                    v[i-1][k] -= random.randint(1, divider2)
     
     #----------------点击量生成逻辑结束------------------------
     f = open(dirX+"gen\\user_artists.dat",'w+')
@@ -303,7 +296,7 @@ def generateUTAT(pMaxFriends, pMaxArtists, pPickPecrentage, pThreshold, pMaxTag,
 
 #标签-用户数【从用户标签中反提取】
 def generateTUn(pTagCount):
-    f2 = open(dirX+"gen\\users_tag_lastfm.dat",'r')
+    f2 = open(dirX+"gen\\user_tag_lastfm.dat",'r')
     u = [0] * pTagCount
     for line in f2:
         if(line != "userid tagid\n"):
@@ -317,7 +310,7 @@ def generateTUn(pTagCount):
 
 if __name__ == "__main__":
     #generateUAW(10, 30, 0.9, 10, 20000, False, 300, 200)
-    #generateUTAT(10, 30, 0.9, 10, 40, 0.97, 10000, 2017, 2019, False, 300, 200, 500)
+    #generateUTAT(100, 30, 0.9, 10, 40, 0.97, 10000, 2017, 2019, False, 300, 200, 500)
     #generateTUn(500)
     artistsCount = int(input("请输入艺术家的数目："))
     tagCount = int(input("请输入歌曲类别数："))
