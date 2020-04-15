@@ -4,7 +4,7 @@ import uuid
 import time
 import graph as g
 
-dirX = "C:\\Users\\surface\\OneDrive - CQU\\Project Sydney\\推荐系统数据生成a.61\\"
+dirX = "C:\\Users\\surface\\Pictures\\Samsung Flow\\DatasetTest\\Datasets"
 
 #依赖函数：为一个用户初始化一些艺术家
 def generateArtists(pMaxArtists, artistsCount):
@@ -69,7 +69,7 @@ def generateFriends(pMaxFriends, pUserCount):
     f.close()
     tempFile = dirX + "User-Friends-temp.dat"
     graph = g.Graph(tempFile)
-    nf = open(dirX+"gen\\user_friends.dat",'w+')
+    nf = open(dirX+"\\user_friends.dat",'w+')
     nf.write("userID friendID\n")
     for i in range(1, int(pUserCount)+1):
         at = graph.adjacentTo(str(i))
@@ -141,7 +141,7 @@ def generateUAW(pMaxFriends, pMaxArtists, pPickPecrentage, pThreshold, pMaxWeigh
         #对于不是访问朋友的共同的店铺-1
     
     #----------------点击量生成逻辑结束------------------------
-    f = open(dirX+"gen\\user_artists.dat",'w+')
+    f = open(dirX+"\\user_artists.dat",'w+')
     f.write("userID artistID weight\n")
     for i in range(1, pUserCount+1):
         #center = random.randint(int(pMaxWeight/50), pMaxWeight)
@@ -176,7 +176,7 @@ def generateUTAT(pMaxFriends, pMaxArtists, pPickPecrentage, pThreshold, pMaxTag,
         c.append(generateAT(pMaxTag, pTagCount))
     for i in range(0, pUserCount):
         #对每一个用户，检查其对应的标签集合是否为空
-        if uct[i] == -1:
+        if uct[i] == -1 or (type(uct[i] == dict) and len(uct[i]) == 0):
             #是空，按照顺序列表传播的方法生成
             singleManu = manuList[i]   
             sets = []
@@ -202,10 +202,10 @@ def generateUTAT(pMaxFriends, pMaxArtists, pPickPecrentage, pThreshold, pMaxTag,
                     if percentControl(1-pTagPercentage) == True:
                         singleC.append(k)
                 mc[singleManu[j+1]] = singleC
+                #print(singleC)
                 singleC = []
             #现在我们拿到了该用户的供应商-类别字典
             umc[i] = mc
-            singleC.clear()
             #现在不是空了，抽取标签集
             allUserTags = set()
             allUserTagTime = set()
@@ -214,6 +214,7 @@ def generateUTAT(pMaxFriends, pMaxArtists, pPickPecrentage, pThreshold, pMaxTag,
             for tag in list(allUserTags):
                 allUserTagTime.add((tag, convertTime2(pStartYear, pEndYear)))
             uct[i] = allUserTagTime
+            #allUserTags.clear()
         friends = friendGraph.adjacentTo(str(i+1))
         for friend in friends:
             #拿到朋友的商店：
@@ -227,7 +228,7 @@ def generateUTAT(pMaxFriends, pMaxArtists, pPickPecrentage, pThreshold, pMaxTag,
             #拿到朋友选择的商店标签，在umc中
             friendChoice = umc[int(friend)-1]
             #如果朋友还没有选择，帮他选好
-            if friendChoice == -1:
+            if friendChoice == -1 or (type(friendChoice) == dict and len(friendChoice) == 0):
                 newFriendChoice = dict()
                 for j in friendManu:
                     #拿到朋友商店中的所有标签：
@@ -238,10 +239,24 @@ def generateUTAT(pMaxFriends, pMaxArtists, pPickPecrentage, pThreshold, pMaxTag,
                         if percentControl(pTagPercentage) == True:
                             friendManuTag.append(k)
                     diff = set(c[j-1]) - myTag
+                    if len(friendManuTag) == 0:
+                        inCtrl = pTagPercentage * 0.8
+                    else:
+                        inCtrl = 1 - pTagPercentage
                     for k in list(diff):
-                        if percentControl(pTagPercentage) == False:
+                        if percentControl(inCtrl) == True:
                             friendManuTag.append(k)
                     newFriendChoice[j] = friendManuTag
+                    #print(friendManuTag)
+                flag = False
+                for k, v in newFriendChoice.items():
+                    if len(v) != 0:
+                        flag = True
+                        break
+                #print(newFriendChoice)
+                if flag == False:
+                    for k, v in newFriendChoice.items():
+                        newFriendChoice[k].append(c[k-1][0])
                 umc[int(friend)-1] = newFriendChoice
             #如果朋友选了，和他选的混在一起
             else:
@@ -251,10 +266,13 @@ def generateUTAT(pMaxFriends, pMaxArtists, pPickPecrentage, pThreshold, pMaxTag,
                     for k in list(diff):
                         if percentControl(pTagPercentage) == True:
                             same.add(k)
+                    if(len(same) == 0):
+                        same.add(c[key-1][0])
                     friendChoice[key] = same
+                umc[int(friend)-1] = friendChoice
             #获取朋友的时间戳
             friendTime = dict()
-            if uct[int(friend)-1] != -1:
+            if uct[int(friend)-1] != -1 and (len(uct[int(friend)-1]) != 0):
                 friendTime = dict(uct[int(friend)-1])
             newFriendTime = dict()
             friendChoice = umc[int(friend)-1]
@@ -275,8 +293,9 @@ def generateUTAT(pMaxFriends, pMaxArtists, pPickPecrentage, pThreshold, pMaxTag,
             for key, value in newFriendTime.items():
                 newFTimeTuple.append((key, value))
             uct[int(friend)-1] = newFTimeTuple
-    f = open(dirX+"gen\\user_taggedartists-timestamps.dat",'w+')
-    f2 = open(dirX+"gen\\user_tag_lastfm.dat",'w+')
+    f = open(dirX+"\\user_taggedartists-timestamps.dat",'w+')
+    f2 = open(dirX+"\\user_tag_lastfm.dat",'w+')
+    #print(umc)
     f2.write("userid tagid\n")
     for i in range(0, pUserCount):
         for j in uct[i]:
@@ -294,15 +313,16 @@ def generateUTAT(pMaxFriends, pMaxArtists, pPickPecrentage, pThreshold, pMaxTag,
     f.close()
     f2.close()
 
+
 #标签-用户数【从用户标签中反提取】
 def generateTUn(pTagCount):
-    f2 = open(dirX+"gen\\user_tag_lastfm.dat",'r')
+    f2 = open(dirX+"\\user_tag_lastfm.dat",'r')
     u = [0] * pTagCount
     for line in f2:
         if(line != "userid tagid\n"):
             u[int(line.split()[1])-1] += 1
     f2.close()
-    f = open(dirX+"gen\\tag_usernum.dat",'w+')
+    f = open(dirX+"\\tag_usernum.dat",'w+')
     for i in range(0, pTagCount):
         f.writelines(str(i+1)+" "+str(u[i])+"\n")
     f.close()
@@ -310,8 +330,10 @@ def generateTUn(pTagCount):
 
 if __name__ == "__main__":
     #generateUAW(10, 30, 0.9, 10, 20000, False, 300, 200)
-    #generateUTAT(100, 30, 0.9, 10, 40, 0.97, 10000, 2017, 2019, False, 300, 200, 500)
-    #generateTUn(500)
+    # generateUTAT(pMaxFriends=10, pMaxArtists=20, pPickPecrentage=0.8, pThreshold=50, 
+    # pMaxTag=20, pTagPercentage=0.96, pMaxWeight=1000, pStartYear=2018, pEndYear=2019, 
+    # pIsNegative=False, pUserCount=200, pArtistsCount=100, pTagCount=200)
+    # generateTUn(200)
     artistsCount = int(input("请输入艺术家的数目："))
     tagCount = int(input("请输入歌曲类别数："))
     userCount = int(input("请输入用户数目："))
